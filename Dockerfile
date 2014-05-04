@@ -16,11 +16,11 @@ RUN mkdir /var/log/cassandra
 ADD ./cassandra.py /cassandra.py
 ADD ./cassandra.yaml.template /apache-cassandra-1.2.16/conf/cassandra.yaml.template
 
-ENV SEEDS "127.0.0.1"
+ENV SEEDS 127.0.0.1
 ENV CLUSTER_NAME "Test Cluster"
-ENV LISTEN_ADDRESS "127.0.0.1"
-ENV BROADCAST_ADDRESS "127.0.0.1"
-ENV RPC_ADDRESS "127.0.0.1"
+ENV LISTEN_ADDRESS 127.0.0.1
+ENV BROADCAST_ADDRESS 127.0.0.1
+ENV RPC_ADDRESS 127.0.0.1
 ENV NUM_TOKENS 256
 
 CMD ["/cassandra.py"]
