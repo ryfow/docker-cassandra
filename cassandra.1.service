@@ -1,0 +1,13 @@
+[Unit]
+Description=Cassandra 1
+After=docker.service
+Requires=docker.service
+
+[Service]
+ExecStart=/usr/bin/docker run -p 9160:9160 \
+                              -p 7199:7199 \
+                              -e "PUBLIC_NAME=%H" \
+                              ryfow/docker-cassandra:latest
+
+[X-Fleet]
+X-Conflicts=cassandra.*.service
