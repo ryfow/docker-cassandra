@@ -1,0 +1,10 @@
+[Unit]
+Description=Announce Cassandra1
+BindsTo=cassandra.1.service
+
+[Service]
+ExecStart=/bin/sh -c "while true; do etcdctl set /services/cassandra/cassandra1 '{ \"host\": \"%H\" }' --ttl 60;sleep 45;done"
+ExecStop=/usr/bin/etcdctl rm /services/cassandra/cassandra1
+
+[X-Fleet]
+X-ConditionMachineOf=cassandra.1.service
