@@ -2,33 +2,43 @@
 from string import Template
 import socket
 import os
+import subprocess
 import etcd
 import json
+import time
+import signal
+import string
+
 def go():
-  print("Starting Cassandra")
   f = open('/apache-cassandra/conf/cassandra.yaml.template', 'r')
   s = Template(f.read())
   f = open('/apache-cassandra/conf/cassandra.yaml', 'w')
   submap = os.environ.copy()
-
-  if not 'INITIAL_TOKEN' in submap:
-    submap['INITIAL_TOKEN'] = ''
-  if 'PUBLIC_NAME' in submap:
-    submap['BROADCAST_ADDRESS'] = socket.gethostbyname(submap['PUBLIC_NAME'])
+  client = etcd.Client(host=submap['COREOS_PUBLIC_IPV4'])
+  public_ip = socket.gethostbyname(submap['COREOS_PUBLIC_IPV4'])
+  submap['BROADCAST_ADDRESS'] = public_ip
 
   submap['LISTEN_ADDRESS'] = socket.gethostbyname(socket.gethostname())
 
-  if 'INITIAL_NODE' in submap and submap['INITIAL_NODE'] == "true":
-    submap['SEEDS'] = submap['BROADCAST_ADDRESS']
-  else:
-    client = etcd.Client(host=submap['PUBLIC_NAME'])
-    cas1_json = client.get("/services/cassandra/cassandra1").value
-    cas1_dict = json.loads(cas1_json)
-    cas1_host = cas1_dict['host']
-    submap['SEEDS'] = socket.gethostbyname(cas1_host)
+  r = client.write("/services/cassandra", public_ip, append=True, ttl=30)
+  time.sleep(1)
+
+  sorted_results = list(sorted(client.read("/services/cassandra").children, key=lambda f:f.createdIndex))
+  sorted_nodes = [str(n.value) for n in sorted_results]
+  # up to the three oldest servers can be seeds. That seems reasonable.
+  number_of_seeds = min(3, len(sorted_nodes))
+  submap['SEEDS'] = string.join(sorted_nodes[:number_of_seeds], ", ")
 
   f.write(s.substitute(submap))
-  os.system("/apache-cassandra/bin/cassandra -f")
+  proc = subprocess.Popen(["/apache-cassandra/bin/cassandra",  "-f"])
+
+  signal.signal(signal.SIGINT, lambda s, f: proc.send_signal(signal.SIGINT))
+  signal.signal(signal.SIGTERM, lambda s, f: proc.send_signal(signal.SIGTERM))
+
+  while not proc.returncode:
+    es_node = client.write(r.key, public_ip, append=False, ttl=30).value
+    time.sleep(20)
+    proc.poll()
 
 if __name__ == '__main__':
     go()
