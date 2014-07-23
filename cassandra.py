@@ -14,8 +14,11 @@ def go():
   s = Template(f.read())
   f = open('/apache-cassandra/conf/cassandra.yaml', 'w')
   submap = os.environ.copy()
-  client = etcd.Client(host=submap['COREOS_PUBLIC_IPV4'])
-  public_ip = socket.gethostbyname(submap['COREOS_PUBLIC_IPV4'])
+  print(submap)
+  ip = socket.gethostbyname(socket.gethostname())
+  print("ip:" + ip)
+  client = etcd.Client(host=submap['SERVICE_HOST'])
+  public_ip = ip # socket.gethostbyname(submap['COREOS_PUBLIC_IPV4'])
   submap['BROADCAST_ADDRESS'] = public_ip
 
   submap['LISTEN_ADDRESS'] = socket.gethostbyname(socket.gethostname())
